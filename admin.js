@@ -1,5 +1,5 @@
 /* Nest admin: switches, housekeeper approvals, leads, bookings. Needs app.js */
-var AD={loaded:false,loading:false,set:{},people:[],leads:[],orders:[],armed:'',msg:null,busy:false};
+var AD={loaded:false,loading:false,set:{},people:[],leads:[],orders:[],bids:[],armed:'',msg:null,busy:false};
 var _home=home;
 home=function(){return _home().replace(' The admin panel is the next piece we connect.','')};
 var _render=render;
@@ -7,9 +7,9 @@ render=function(){_render();adminRender()};
 function aapi(path,opt){opt=opt||{};opt.token=sess.access_token;return api(path,opt).then(function(r){if(r.status===401){save(null);AD.loaded=false;render();throw new Error('expired')}return r})}
 function adminLoad(){
   if(AD.loaded||AD.loading)return;AD.loading=true;
-  Promise.all([aapi('/rest/v1/settings?select=key,value'),aapi('/rest/v1/profiles?select=id,full_name,email,phone,role,requested_role,active,created_at&order=created_at.desc'),aapi('/rest/v1/leads?select=*&order=created_at.desc&limit=25'),aapi('/rest/v1/orders?select=*,houses(address)&order=created_at.desc&limit=25')]).then(function(a){
+  Promise.all([aapi('/rest/v1/settings?select=key,value'),aapi('/rest/v1/profiles?select=id,full_name,email,phone,role,requested_role,active,created_at&order=created_at.desc'),aapi('/rest/v1/leads?select=*&order=created_at.desc&limit=25'),aapi('/rest/v1/orders?select=*,houses(address)&order=created_at.desc&limit=25'),aapi('/rest/v1/bids?select=*,profiles!bids_housekeeper_id_fkey(full_name),bid_steps(steps(key,pay_cents,orders(checkout_at,houses(address))))&status=eq.pending&order=created_at')]).then(function(a){
     AD.set={};(a[0].j||[]).forEach(function(s){AD.set[s.key]=s.value});
-    AD.people=a[1].j||[];AD.leads=a[2].j||[];AD.orders=a[3].j||[];AD.loaded=true;AD.loading=false;adminRender();
+    AD.people=a[1].j||[];AD.leads=a[2].j||[];AD.orders=a[3].j||[];AD.bids=(a[4].j||[]).filter(function(b){return (b.bid_steps||[]).length});AD.loaded=true;AD.loading=false;adminRender();
   }).catch(function(){AD.loading=false});
 }
 function m$(c){return '$'+((c||0)/100).toFixed((c||0)%100?2:0)}
@@ -26,6 +26,12 @@ function adminHtml(){
   if(!pend.length&&!hk.length)h+='<p class="sub">No applications yet.</p>';
   pend.forEach(function(p){h+='<div class="row" style="align-items:center"><span><b>'+esc(p.full_name||'No name')+'</b><br><small style="color:var(--muted)">'+esc(p.email||'')+' '+esc(p.phone||'')+'<br>Applied '+when(p.created_at)+'</small></span><button type="button" class="out" data-d="appr" data-v="'+p.id+'">Approve</button></div>'});
   hk.forEach(function(p){h+='<div class="row" style="align-items:center"><span><b>'+esc(p.full_name||'No name')+'</b> <span class="pill">approved</span><br><small style="color:var(--muted)">'+esc(p.email||'')+'</small></span><button type="button" class="out" data-d="rem" data-v="'+p.id+'">Remove</button></div>'});
+  h+='</div>';
+  h+='<div class="card" style="margin-top:16px"><h1>Bids to review</h1>';
+  if(!AD.bids.length)h+='<p class="sub">No pending bids.</p>';
+  var LB={trash:'Trash',laundry:'Laundry',baths:'Baths',kitchen:'Kitchen',floors:'Floors'};
+  AD.bids.forEach(function(b){var st=b.bid_steps.map(function(x){return x.steps}),a0=st[0]&&st[0].orders&&st[0].orders.houses?st[0].orders.houses.address:'';
+    h+='<div class="row" style="align-items:center"><span><b>'+esc(b.profiles?b.profiles.full_name:'Housekeeper')+'</b> <span class="pill">'+b.rate_pct+'%</span><br><small style="color:var(--muted)">'+st.map(function(x){return LB[x.key]||x.key}).join(', ')+'<br>'+esc(a0)+(b.start_at?' &middot; starts '+when(b.start_at):'')+'</small></span><span style="text-align:right"><b>'+m$(b.total_cents)+'</b><br><button type="button" class="out" data-d="bacc" data-v="'+b.id+'">Accept</button> <button type="button" class="out" data-d="bdec" data-v="'+b.id+'">Decline</button></span></div>'});
   h+='</div>';
   h+='<div class="card" style="margin-top:16px"><h1>Bookings</h1>';
   if(!AD.orders.length)h+='<p class="sub">No bookings yet.</p>';
@@ -56,6 +62,8 @@ function bindA(){
       AD.armed='';
       if(a==='appr')setRole(v,'housekeeper');
       else if(a==='rem')setRole(v,'owner');
+      else if(a==='bacc')setBid(v,'accepted');
+      else if(a==='bdec')setBid(v,'declined');
     };
   });
 }
@@ -69,6 +77,13 @@ function setRole(id,role){
   if(AD.busy)return;AD.busy=true;
   aapi('/rest/v1/profiles?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:{role:role},prefer:'return=representation'}).then(function(r){
     if(r.ok&&r.j&&r.j[0]){AD.people=AD.people.map(function(p){return p.id===id?Object.assign(p,r.j[0]):p});AD.msg=null}else AD.msg={t:'err',m:'That did not save. Try again.'};
+  }).catch(function(){}).then(function(){AD.busy=false;adminRender()});
+}
+function setBid(id,status){
+  if(AD.busy)return;AD.busy=true;
+  aapi('/rest/v1/bids?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:{status:status},prefer:'return=representation'}).then(function(r){
+    if(r.ok&&r.j&&r.j[0]){AD.bids=AD.bids.filter(function(b){return b.id!==id});AD.msg={t:'ok',m:status==='accepted'?'Bid accepted. Those steps are assigned.':'Bid declined.'};if(status==='accepted')AD.loaded=false}
+    else AD.msg={t:'err',m:(r.j&&r.j.message)||'That did not save. Try again.'};
   }).catch(function(){}).then(function(){AD.busy=false;adminRender()});
 }
 function setStage(id,stage){
