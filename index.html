@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cleaning Nest</title>
+<style>
+:root{
+  --bg:#f4f6f5; --surface:#fff; --ink:#14262b; --muted:#566a6e; --line:#d5dedd;
+  --brand:#0f5c5c; --brand-ink:#fff; --soft:#e3efee; --err:#b3261e; --err-bg:#fdeceb; --ok:#1f7a4d; --ok-bg:#e6f4ec;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0e1819;--surface:#162427;--ink:#e8f1f0;--muted:#98b0b2;--line:#2a3f43;--brand:#5fc3c0;--brand-ink:#08201f;--soft:#1d3436;--err:#ff7b72;--err-bg:#2e1715;--ok:#6fd3a0;--ok-bg:#15281f;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;min-height:100vh;
+  padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+main{max-width:420px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin:8px 0 20px}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:800;font-size:18px}
+.brand b{font-size:20px;display:block;line-height:1.1}
+.brand span{color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:3px;gap:3px;margin-bottom:16px}
+.seg button{all:unset;flex:1;text-align:center;cursor:pointer;padding:10px 4px;border-radius:9px;font-weight:700;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 5px}
+input[type=text],input[type=email],input[type=password],input[type=tel]{width:100%;font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.pw{position:relative}
+.pw button{all:unset;position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:13px;font-weight:700;color:var(--brand);padding:8px}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.who button{all:unset;cursor:pointer;text-align:center;padding:12px 6px;border:2px solid var(--line);border-radius:12px;font-weight:700;font-size:14px}
+.who button small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.who button[aria-pressed="true"]{border-color:var(--brand);background:var(--soft)}
+.go{all:unset;box-sizing:border-box;display:block;width:100%;text-align:center;cursor:pointer;margin-top:18px;padding:14px;border-radius:12px;background:var(--brand);color:var(--brand-ink);font-weight:800;font-size:16px}
+.go[aria-disabled="true"]{opacity:.5;cursor:wait}
+.msg{border-radius:10px;padding:10px 12px;font-size:14px;margin-top:14px}
+.msg.err{background:var(--err-bg);color:var(--err);border:1px solid var(--err)}
+.msg.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+.fine{color:var(--muted);font-size:12.5px;margin-top:14px}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;background:var(--soft);color:var(--brand)}
+.out{all:unset;cursor:pointer;color:var(--muted);text-decoration:underline;font-size:14px;margin-top:16px;display:inline-block}
+.row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.row:first-of-type{border-top:0}
+noscript{display:block;padding:20px}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><div class="logo" aria-hidden="true">CN</div><div><b>Cleaning Nest</b><span>Guest-ready homes, proven with photos</span></div></div>
+  <div id="app"></div>
+  <noscript>This page needs JavaScript to sign in.</noscript>
+</main>
+<script>
+var SB='https://rhqqmdgeqhxirpholjsb.supabase.co';
+var KEY='sb_publishable_8A2yEyzocYKD5YEVn1mkZQ_TGks3GUd';
+var mode='in', want='owner', busy=false, msg=null, showPw=false, form={name:'',email:'',phone:''};
+var sess=null;
+try{sess=JSON.parse(localStorage.getItem('cn_session')||'null')}catch(e){}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function save(s){sess=s;try{if(s)localStorage.setItem('cn_session',JSON.stringify(s));else localStorage.removeItem('cn_session')}catch(e){}}
+function api(path,opt){
+  opt=opt||{};
+  var h={apikey:KEY,'Content-Type':'application/json'};
+  if(opt.token)h.Authorization='Bearer '+opt.token;
+  return fetch(SB+path,{method:opt.method||'GET',headers:h,body:opt.body?JSON.stringify(opt.body):undefined}).then(function(r){
+    return r.text().then(function(t){var j=null;try{j=t?JSON.parse(t):null}catch(e){}return {ok:r.ok,status:r.status,j:j}});
+  });
+}
+function nice(r){
+  var j=r.j||{},c=j.error_code||j.code||'',m=(j.msg||j.message||j.error_description||'').toLowerCase();
+  if(c==='invalid_credentials'||m.indexOf('invalid login')>-1)return 'That email and password do not match. Check them and try again.';
+  if(c==='email_not_confirmed'||m.indexOf('not confirmed')>-1)return 'Your email is not confirmed yet. Check your inbox, or ask Nestled to confirm it.';
+  if(c==='user_already_exists'||m.indexOf('already')>-1)return 'That email already has an account. Use Sign in instead.';
+  if(c==='weak_password'||m.indexOf('password')>-1)return 'Use a password with at least 8 characters.';
+  if(r.status===429||c==='over_email_send_rate_limit')return 'Too many tries. Wait a minute and try again.';
+  if(r.status===0)return 'No connection. Check your internet and try again.';
+  return 'Something went wrong. Try again in a moment.';
+}
+function setMsg(t,m){msg=m?{t:t,m:m}:null}
+function render(){
+  var a=$('app');
+  if(sess&&sess.profile){a.innerHTML=home();bind();return}
+  var h='<div class="card"><div class="seg" role="group" aria-label="Sign in or create account"><button type="button" data-a="mode" data-v="in" aria-pressed="'+(mode==='in')+'">Sign in</button><button type="button" data-a="mode" data-v="up" aria-pressed="'+(mode==='up')+'">Create account</button></div>';
+  h+='<h1>'+(mode==='in'?'Welcome back':'Create your account')+'</h1><p class="sub">'+(mode==='in'?'Sign in to book cleans, bid on jobs or run the admin.':'It takes under a minute.')+'</p>';
+  h+='<form id="f" novalidate>';
+  if(mode==='up'){
+    h+='<label for="name">Full name</label><input id="name" type="text" autocomplete="name" value="'+esc(form.name)+'">';
+  }
+  h+='<label for="email">Email</label><input id="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" value="'+esc(form.email)+'">';
+  h+='<label for="pw">Password</label><div class="pw"><input id="pw" type="'+(showPw?'text':'password')+'" autocomplete="'+(mode==='in'?'current-password':'new-password')+'"><button type="button" data-a="pw">'+(showPw?'Hide':'Show')+'</button></div>';
+  if(mode==='up'){
+    h+='<label for="phone">Mobile number (for job texts)</label><input id="phone" type="tel" autocomplete="tel" inputmode="tel" value="'+esc(form.phone)+'">';
+    h+='<label>I am a</label><div class="who"><button type="button" data-a="want" data-v="owner" aria-pressed="'+(want==='owner')+'">Property owner<small>Book cleans</small></button><button type="button" data-a="want" data-v="housekeeper" aria-pressed="'+(want==='housekeeper')+'">Housekeeper<small>Bid on jobs</small></button></div>';
+  }
+  h+='<button class="go" type="submit" aria-disabled="'+busy+'">'+(busy?'One moment...':(mode==='in'?'Sign in':'Create account'))+'</button>';
+  h+='</form>';
+  if(msg)h+='<div class="msg '+msg.t+'" role="alert">'+esc(msg.m)+'</div>';
+  if(mode==='up')h+='<p class="fine">Housekeeper accounts are approved by Nest admin before you can see any jobs.</p>';
+  h+='</div>';
+  a.innerHTML=h;bind();
+}
+function home(){
+  var p=sess.profile,r=p.role,rq=(sess.user.user_metadata||{}).requested_role;
+  var pend=r==='owner'&&rq==='housekeeper';
+  var h='<div class="card"><span class="pill">'+(pend?'Pending approval':esc(r))+'</span><h1 style="margin-top:10px">Hi'+(p.full_name?', '+esc(p.full_name.split(' ')[0]):'')+'</h1>';
+  if(pend)h+='<p class="sub">Your housekeeper account is created. Nest admin needs to approve it before you can see jobs. We will text you.</p>';
+  else if(r==='admin')h+='<p class="sub">You are signed in as Nest admin. The admin panel is the next piece we connect.</p>';
+  else if(r==='housekeeper')h+='<p class="sub">You are approved as a housekeeper. Job bidding opens when the platform goes live.</p>';
+  else h+='<p class="sub">Your account is ready. Booking opens when the platform goes live. We will let you know.</p>';
+  h+='<div class="row"><span>Email</span><b>'+esc(sess.user.email)+'</b></div><div class="row"><span>Role</span><b>'+esc(r)+'</b></div>';
+  h+='<button class="out" type="button" data-a="out">Sign out</button></div>';
+  return h;
+}
+function bind(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-a]'),function(b){
+    b.onclick=function(){
+      var a=b.getAttribute('data-a'),v=b.getAttribute('data-v');
+      keep();
+      if(a==='mode'){mode=v;msg=null}
+      else if(a==='want'){want=v}
+      else if(a==='pw'){showPw=!showPw}
+      else if(a==='out'){out();return}
+      render();
+    };
+  });
+  var f=$('f');if(f)f.onsubmit=function(e){e.preventDefault();submit()};
+}
+function keep(){
+  if($('name'))form.name=$('name').value;
+  if($('email'))form.email=$('email').value;
+  if($('phone'))form.phone=$('phone').value;
+}
+function loadProfile(s){
+  return api('/rest/v1/profiles?select=role,full_name&id=eq.'+encodeURIComponent(s.user.id),{token:s.access_token}).then(function(r){
+    var p=(r.ok&&r.j&&r.j[0])||{role:'owner',full_name:(s.user.user_metadata||{}).full_name||''};
+    s.profile=p;save(s);return s;
+  });
+}
+function submit(){
+  if(busy)return;
+  keep();
+  var email=$('email').value.trim(),pw=$('pw').value;
+  if(!email||email.indexOf('@')<1){setMsg('err','Enter a valid email address.');render();return}
+  if(pw.length<8){setMsg('err','Use a password with at least 8 characters.');render();return}
+  if(mode==='up'&&!form.name.trim()){setMsg('err','Enter your full name.');render();return}
+  busy=true;setMsg();render();
+  var p;
+  if(mode==='up'){
+    p=api('/auth/v1/signup',{method:'POST',body:{email:email,password:pw,data:{full_name:form.name.trim(),phone:form.phone.trim(),requested_role:want}}}).then(function(r){
+      if(!r.ok){setMsg('err',nice(r));return null}
+      var j=r.j||{};
+      if(j.access_token){return loadProfile(j)}
+      setMsg('ok','Account created. Check your email to confirm it, then sign in.');mode='in';return null;
+    });
+  }else{
+    p=api('/auth/v1/token?grant_type=password',{method:'POST',body:{email:email,password:pw}}).then(function(r){
+      if(!r.ok){setMsg('err',nice(r));return null}
+      return loadProfile(r.j);
+    });
+  }
+  p.catch(function(){setMsg('err',nice({status:0}))}).then(function(){busy=false;render()});
+}
+function out(){
+  var t=sess&&sess.access_token;
+  save(null);msg=null;mode='in';render();
+  if(t)api('/auth/v1/logout',{method:'POST',token:t}).catch(function(){});
+}
+/* restore session */
+(function(){
+  if(sess&&sess.access_token){
+    api('/auth/v1/user',{token:sess.access_token}).then(function(r){
+      if(r.ok){sess.user=r.j;return loadProfile(sess)}
+      save(null);
+    }).catch(function(){}).then(render);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
