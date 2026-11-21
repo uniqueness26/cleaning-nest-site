@@ -1,5 +1,5 @@
 /* Nest admin: switches, housekeeper approvals, leads, bookings. Needs app.js */
-var AD={loaded:false,loading:false,set:{},people:[],leads:[],orders:[],bids:[],armed:'',msg:null,busy:false};
+var AD={loaded:false,loading:false,set:{},people:[],leads:[],orders:[],bids:[],texts:[],armed:'',msg:null,busy:false};
 var _home=home;
 home=function(){return _home().replace(' The admin panel is the next piece we connect.','')};
 var _render=render;
@@ -7,9 +7,9 @@ render=function(){_render();adminRender()};
 function aapi(path,opt){opt=opt||{};opt.token=sess.access_token;return api(path,opt).then(function(r){if(r.status===401){save(null);AD.loaded=false;render();throw new Error('expired')}return r})}
 function adminLoad(){
   if(AD.loaded||AD.loading)return;AD.loading=true;
-  Promise.all([aapi('/rest/v1/settings?select=key,value'),aapi('/rest/v1/profiles?select=id,full_name,email,phone,role,requested_role,active,created_at&order=created_at.desc'),aapi('/rest/v1/leads?select=*&order=created_at.desc&limit=25'),aapi('/rest/v1/orders?select=*,houses(address)&order=created_at.desc&limit=25'),aapi('/rest/v1/bids?select=*,profiles!bids_housekeeper_id_fkey(full_name),bid_steps(steps(key,pay_cents,orders(checkout_at,houses(address))))&status=eq.pending&order=created_at')]).then(function(a){
+  Promise.all([aapi('/rest/v1/settings?select=key,value'),aapi('/rest/v1/profiles?select=id,full_name,email,phone,role,requested_role,active,created_at&order=created_at.desc'),aapi('/rest/v1/leads?select=*&order=created_at.desc&limit=25'),aapi('/rest/v1/orders?select=*,houses(address)&order=created_at.desc&limit=25'),aapi('/rest/v1/bids?select=*,profiles!bids_housekeeper_id_fkey(full_name),bid_steps(steps(key,pay_cents,orders(checkout_at,houses(address))))&status=eq.pending&order=created_at'),aapi('/rest/v1/sms_outbox?select=id,to_phone,event,body,status,reason,created_at,sent_at&order=created_at.desc&limit=25')]).then(function(a){
     AD.set={};(a[0].j||[]).forEach(function(s){AD.set[s.key]=s.value});
-    AD.people=a[1].j||[];AD.leads=a[2].j||[];AD.orders=a[3].j||[];AD.bids=(a[4].j||[]).filter(function(b){return (b.bid_steps||[]).length});AD.loaded=true;AD.loading=false;adminRender();
+    AD.people=a[1].j||[];AD.leads=a[2].j||[];AD.orders=a[3].j||[];AD.bids=(a[4].j||[]).filter(function(b){return (b.bid_steps||[]).length});AD.texts=a[5].j||[];AD.loaded=true;AD.loading=false;adminRender();
   }).catch(function(){AD.loading=false});
 }
 function m$(c){return '$'+((c||0)/100).toFixed((c||0)%100?2:0)}
@@ -19,7 +19,7 @@ function sw(key,label,note){
   return '<div class="row" style="align-items:center"><span><b>'+label+'</b><br><small style="color:var(--muted)">'+note+'</small></span><button type="button" role="switch" aria-checked="'+on+'" data-d="sw" data-v="'+key+'" style="all:unset;cursor:pointer;padding:10px 14px;border-radius:999px;font-weight:800;font-size:14px;border:2px solid '+(on?'var(--ok)':'var(--line)')+';background:'+(armed?'var(--err-bg)':(on?'var(--ok-bg)':'var(--surface)'))+';color:'+(armed?'var(--err)':(on?'var(--ok)':'var(--muted)'))+'">'+(armed?'Tap again to '+(on?'turn OFF':'turn ON'):(on?'ON':'OFF'))+'</button></div>';
 }
 function adminHtml(){
-  var h='<div class="card"><h1>Switches</h1><p class="sub">Everything stays off until you turn it on.</p>'+sw('platform_on','Platform','Housekeepers can see and bid on jobs')+sw('accept_new_orders','Accept bookings','Owners can confirm and lock bookings')+'</div>';
+  var h='<div class="card"><h1>Switches</h1><p class="sub">Everything stays off until you turn it on.</p>'+sw('platform_on','Platform','Housekeepers can see and bid on jobs')+sw('accept_new_orders','Accept bookings','Owners can confirm and lock bookings')+sw('sms_sending_on','Job texts','Automatic texts to opted-in people, 9am to 8pm Eastern')+'</div>';
   var pend=AD.people.filter(function(p){return p.requested_role==='housekeeper'&&p.role==='owner'});
   var hk=AD.people.filter(function(p){return p.role==='housekeeper'});
   h+='<div class="card" style="margin-top:16px"><h1>Housekeepers</h1>';
@@ -41,6 +41,10 @@ function adminHtml(){
   if(!AD.leads.length)h+='<p class="sub">No leads yet.</p>';
   var stages=['new','contacted','signed_up','booked','lost'];
   AD.leads.forEach(function(l){h+='<div class="row" style="align-items:center"><span><b>'+esc(l.full_name||'No name')+'</b> <span class="pill">'+esc(l.kind)+'</span><br><small style="color:var(--muted)">'+esc(l.email||'')+' '+esc(l.phone||'')+' '+esc(l.zip||'')+'<br>'+esc(l.utm_source||'direct')+(l.utm_campaign?' / '+esc(l.utm_campaign):'')+' &middot; '+when(l.created_at)+'</small></span><select data-d="stage" data-v="'+l.id+'" aria-label="Lead stage" style="font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+stages.map(function(s){return '<option'+(s===l.stage?' selected':'')+'>'+s+'</option>'}).join('')+'</select></div>'});
+  h+='</div>';
+  h+='<div class="card" style="margin-top:16px"><h1>Text log</h1>';
+  if(!AD.texts.length)h+='<p class="sub">No texts yet.</p>';
+  AD.texts.forEach(function(t){h+='<div class="row"><span>'+esc((t.to_phone||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3'))+'<br><small style="color:var(--muted)">'+esc(t.event)+' &middot; '+when(t.created_at)+(t.reason?' &middot; '+esc(t.reason):'')+'</small></span><span class="pill">'+esc(t.status)+'</span></div>'});
   h+='</div>';
   if(AD.msg)h+='<div class="msg '+AD.msg.t+'" role="alert">'+esc(AD.msg.m)+'</div>';
   return h;
