@@ -18,7 +18,7 @@ function forgot(){
   var em=($('email')&&$('email').value||'').trim();
   if(em.indexOf('@')<1){RS.msg={t:'err',m:'Type your email above first, then tap Forgot password.'};render();return}
   form.email=em;
-  api('/auth/v1/recover',{method:'POST',body:{email:em}}).then(function(){RS.msg={t:'ok',m:'If that email has an account, a reset link is on its way.'}}).catch(function(){RS.msg={t:'err',m:nice({status:0})}}).then(render);
+  api('/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',body:{email:em}}).then(function(){RS.msg={t:'ok',m:'If that email has an account, a reset link is on its way.'}}).catch(function(){RS.msg={t:'err',m:nice({status:0})}}).then(render);
 }
 function setPw(){
   var p=$('np').value;if(RS.busy)return;
