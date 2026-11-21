@@ -3,7 +3,7 @@ var HK={loaded:false,loading:false,on:false,steps:[],bids:[],mine:[],pick:{},rat
 var _render=render;
 render=function(){_render();hkRender()};
 function hapi(path,opt){opt=opt||{};opt.token=sess.access_token;return api(path,opt).then(function(r){if(r.status===401){save(null);HK.loaded=false;render();throw new Error('expired')}return r})}
-var LBL={trash:'Trash and reset',laundry:'Laundry',baths:'Bathrooms',kitchen:'Kitchen',floors:'Floors (last)'};
+var LBL={trash:'Trash and reset',laundry:'Laundry',surfaces:'Surfaces and glass',baths:'Bathrooms',kitchen:'Kitchen',floors:'Floors (last)'};
 function mm(c){return '$'+((c||0)/100).toFixed((c||0)%100?2:0)}
 function wh(t){return new Date(t).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})}
 function hkLoad(){
@@ -32,7 +32,7 @@ function hkHtml(){
     h+='<label for="hr">Your rate</label><select id="hr" style="width:100%;font:inherit;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+[80,90,100,110,120].map(function(r){return '<option value="'+r+'"'+(r===HK.rate?' selected':'')+'>'+r+'% of listed pay</option>'}).join('')+'</select>';
     h+='<label for="hs">When can you start?</label><input id="hs" type="datetime-local" value="'+esc(HK.start)+'" style="width:100%;font:inherit;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">';
     h+='<div class="row"><span>Steps picked</span><b>'+p.length+'</b></div><div class="row"><span>Work time</span><b>'+Math.floor(min/60)+'h '+(min%60)+'m</b></div><div class="row"><span>Your bid</span><b>'+mm(tot)+'</b></div>';
-    h+='<button class="go" type="button" data-h="bid" aria-disabled="'+HK.busy+'">Submit bid</button>';
+    if(sess.profile&&sess.profile.role==='admin')h+='<p class="sub">You are signed in as admin, so you can look at jobs here but not bid. Use a housekeeper account to bid.</p>';else h+='<button class="go" type="button" data-h="bid" aria-disabled="'+HK.busy+'">Submit bid</button>';
   }
   if(HK.msg)h+='<div class="msg '+HK.msg.t+'" role="alert">'+esc(HK.msg.m)+'</div>';
   h+='</div>';
