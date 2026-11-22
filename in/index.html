@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><title>Check-in instructions | B&amp;B Nest</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body><main>
+<div class="top"><a href="https://thebnbnest.com">B&amp;B Nest</a><span>Guest check-in</span></div>
+<div class="hero"><h1 id="t">Your check-in instructions</h1><p id="m">Opening your step-by-step guide with photos. Tip: save the PDF to your phone so it works without internet.</p></div>
+<a class="door" id="go" href="#"><b>Open the instructions</b><span>Tap here if it does not open by itself</span></a>
+<footer>A B&amp;B Nest company &middot; This page counts when the guide is opened so we can be ready for your arrival. <a href="../privacy.html">Privacy</a></footer>
+</main>
+<script>
+(function(){
+var SB='https://rhqqmdgeqhxirpholjsb.supabase.co',K='sb_publishable_8A2yEyzocYKD5YEVn1mkZQ_TGks3GUd';
+var q=new URLSearchParams(location.search),p=q.get('p')||'maverick',c=q.get('c')||'';
+var seen=false;try{seen=!!localStorage.getItem('gl_'+p+'_'+c)}catch(e){}
+var meta={tz:'',lang:navigator.language||'',platform:navigator.platform||'',screen:screen.width+'x'+screen.height,
+ mobile:/Mobi|Android|iPhone/i.test(navigator.userAgent),online:navigator.onLine,ref:document.referrer||'',ua:navigator.userAgent||''};
+try{meta.tz=Intl.DateTimeFormat().resolvedOptions().timeZone}catch(e){}
+function call(ev){return fetch(SB+'/rest/v1/rpc/guest_link_open',{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'},
+ body:JSON.stringify({p_property:p,p_code:c,p_event:ev,p_meta:meta}),keepalive:true}).then(function(r){return r.json()})}
+var go=document.getElementById('go'),done=false;
+function dest(u){if(!u){document.getElementById('m').textContent='This link is not active. Please message your host.';go.style.display='none';return}
+ go.href=u;try{localStorage.setItem('gl_'+p+'_'+c,'1')}catch(e){}
+ if(done)return;done=true;setTimeout(function(){location.href=u},900)}
+call(seen?'return':'open').then(dest).catch(function(){
+ document.getElementById('m').textContent='You look to be offline. Use your saved copy of the instructions, or reconnect and tap below.';
+ go.href='https://drive.google.com/file/d/12FWrCchm9JBKKSyVCxoV1RAzg4uT1giz/view?usp=drivesdk'});
+go.addEventListener('click',function(){call('continue').catch(function(){})});
+})();
+</script></body></html>
